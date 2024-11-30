@@ -6,10 +6,80 @@ const app = document.querySelector('#app')
 const grid = new Grid(app)
 grid.getRandomEmptyCell().linkTile(new Tile(app))
 grid.getRandomEmptyCell().linkTile(new Tile(app))
-setupInputOnce()
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
 
 function setupInputOnce() {
   window.addEventListener("keydown", handleInput, { once: true });
+  app.addEventListener("touchstart", handleTouchStart, { passive: true });
+  app.addEventListener("touchend", handleTouchEnd);
+}
+
+function handleTouchStart(event) {
+  touchStartX = event.touches[0].clientX;
+  touchStartY = event.touches[0].clientY;
+}
+
+function handleTouchEnd(event) {
+  touchEndX = event.changedTouches[0].clientX;
+  touchEndY = event.changedTouches[0].clientY;
+  
+  handleSwipe();
+}
+
+async function handleSwipe() {
+  const deltaX = touchEndX - touchStartX;
+  const deltaY = touchEndY - touchStartY;
+  
+  const minSwipeDistance = 50;
+  
+  if (Math.abs(deltaX) > Math.abs(deltaY)) {
+    if (Math.abs(deltaX) > minSwipeDistance) {
+      if (deltaX > 0) {
+        if (!canMoveRight()) {
+          setupInputOnce();
+          return;
+        }
+        await moveRight();
+      } else {
+        if (!canMoveLeft()) {
+          setupInputOnce();
+          return;
+        }
+        await moveLeft();
+      }
+    }
+  } else {
+    if (Math.abs(deltaY) > minSwipeDistance) {
+      if (deltaY > 0) {
+        if (!canMoveDown()) {
+          setupInputOnce();
+          return;
+        }
+        await moveDown();
+      } else {
+        if (!canMoveUp()) {
+          setupInputOnce();
+          return;
+        }
+        await moveUp();
+      }
+    }
+  }
+
+  const newTile = new Tile(app);
+  grid.getRandomEmptyCell().linkTile(newTile);
+
+  if (!canMoveUp() && !canMoveDown() && !canMoveLeft() && !canMoveRight()) {
+    await newTile.waitForAnimationEnd()
+    alert("Try again!")
+    return;
+  }
+
+  setupInputOnce();
 }
 
 async function handleInput(event) {
@@ -151,3 +221,5 @@ function canMoveInGroup(group) {
     return targetCell.canAccept(cell.linkedTile);
   });
 }
+
+setupInputOnce();
